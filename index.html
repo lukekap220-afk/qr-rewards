@@ -1,0 +1,38 @@
+<script>
+  function giveReward() {
+    // 1% grand prize chance
+    let grandPrizeRoll = Math.random();
+    if (grandPrizeRoll < 0.01) {
+      document.getElementById("result").innerHTML =
+        "🏆 GRAND PRIZE UNLOCKED! 🏆";
+      return;
+    }
+
+    // Possible rewards (5 to 100 in steps of 5)
+    const rewards = [];
+    for (let i = 5; i <= 100; i += 5) {
+      rewards.push(i);
+    }
+
+    // Weighted system: lower values more likely
+    // Weight = inverse (higher points = lower weight)
+    const weights = rewards.map(r => 1 / r);
+
+    // Build cumulative distribution
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+    let random = Math.random() * totalWeight;
+
+    let selected = rewards[0];
+    for (let i = 0; i < rewards.length; i++) {
+      random -= weights[i];
+      if (random <= 0) {
+        selected = rewards[i];
+        break;
+      }
+    }
+
+    document.getElementById("result").innerHTML =
+      "You earned " + selected + " points!";
+  }
+</script>
