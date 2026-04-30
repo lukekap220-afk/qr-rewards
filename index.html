@@ -1,50 +1,199 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Rewards Promo</title>
+  <title>Lucky Legendary Bracket Wheel</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: #f3fff3;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    h1 {
+      color: green;
+      margin-top: 20px;
+    }
+
+    p {
+      color: green;
+    }
+
+    .wheel-container {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      margin: 40px auto;
+    }
+
+    .wheel {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 8px solid green;
+      background: conic-gradient(
+        #b6f7b6 0% 10%,
+        #7efc7e 10% 20%,
+        #b6f7b6 20% 30%,
+        #7efc7e 30% 40%,
+        #b6f7b6 40% 50%,
+        #7efc7e 50% 60%,
+        #b6f7b6 60% 70%,
+        #7efc7e 70% 80%,
+        #b6f7b6 80% 90%,
+        #7efc7e 90% 100%
+      );
+      transition: transform 4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .pointer {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 30px;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px 25px;
+      font-size: 18px;
+      cursor: pointer;
+      background: green;
+      color: white;
+      border: none;
+      border-radius: 10px;
+    }
+
+    #result {
+      color: green;
+      margin-top: 20px;
+      font-size: 22px;
+    }
+
+    .clover {
+      position: absolute;
+      font-size: 20px;
+      animation: fall 2s linear forwards;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(600px) rotate(360deg); opacity: 0; }
+    }
+  </style>
 </head>
 
-<body style="font-family: Arial; text-align:center; padding-top:50px;">
+<body>
 
-  <h1>🎉 Rewards System 🎉</h1>
-  <p>Click to reveal your reward:</p>
+<h1>🍀 Lucky Legendary Bracket Wheel 🍀</h1>
+<p>One spin only — make it count</p>
 
-  <button onclick="giveReward()" style="font-size:20px; padding:10px 20px;">
-    Claim Reward
-  </button>
+<div class="wheel-container">
+  <div class="pointer">⬇️</div>
+  <div id="wheel" class="wheel"></div>
+</div>
 
-  <h2 id="result"></h2>
+<button id="spinBtn" onclick="spinWheel()">SPIN 🍀</button>
 
-  <script>
-    function giveReward() {
+<div id="result"></div>
 
-      // 1% grand prize
-      if (Math.random() < 0.01) {
-        document.getElementById("result").innerHTML =
-          "🏆 GRAND PRIZE! 🏆";
-        return;
-      }
+<script>
+let spun = localStorage.getItem("spun");
 
-      const rewards = [];
-      for (let i = 5; i <= 100; i += 5) {
-        rewards.push(i);
-      }
+if (spun) {
+  document.getElementById("spinBtn").disabled = true;
+  document.getElementById("result").innerHTML = "You already spun the wheel.";
+}
 
-      const weights = rewards.map(r => 1 / r);
-      const total = weights.reduce((a, b) => a + b, 0);
+// 🎵 RANDOM BACKGROUND MUSIC (per user)
+let bgMusic;
 
-      let rand = Math.random() * total;
+if (Math.random() < 0.5) {
+  bgMusic = new Audio("Lucky_Legendary_Bracket.mp3");
+} else {
+  bgMusic = new Audio("Different_Blueprints.mp3");
+}
 
-      for (let i = 0; i < rewards.length; i++) {
-        rand -= weights[i];
-        if (rand <= 0) {
-          document.getElementById("result").innerHTML =
-            "You earned " + rewards[i] + " points!";
-          return;
-        }
-      }
+bgMusic.loop = true;
+bgMusic.volume = 0.4;
+
+// Must start after interaction (browser rule)
+document.body.addEventListener("click", () => {
+  if (bgMusic.paused) {
+    bgMusic.play();
+  }
+}, { once: true });
+
+// 🏆 GRAND PRIZE SOUND
+let grandSound = new Audio("Crown_of_the_Sovereign.mp3");
+
+function spinWheel() {
+  if (localStorage.getItem("spun")) return;
+
+  localStorage.setItem("spun", "true");
+  document.getElementById("spinBtn").disabled = true;
+
+  const wheel = document.getElementById("wheel");
+
+  const rewards = [5,10,15,20,25,30,40,50,75,100];
+
+  const weights = rewards.map(r => 1 / r);
+  const total = weights.reduce((a,b)=>a+b,0);
+
+  let rand = Math.random() * total;
+  let selectedIndex = 0;
+
+  for (let i=0;i<rewards.length;i++){
+    rand -= weights[i];
+    if (rand <= 0){
+      selectedIndex = i;
+      break;
     }
-  </script>
+  }
+
+  const reward = rewards[selectedIndex];
+
+  const rotation = 360 * 5 + (selectedIndex * 36);
+  wheel.style.transform = `rotate(${rotation}deg)`;
+
+  setTimeout(() => {
+
+    // 🏆 GRAND PRIZE (1%)
+    if (Math.random() < 0.01) {
+      document.getElementById("result").innerHTML =
+        "🏆 GRAND PRIZE UNLOCKED! 🏆";
+
+      grandSound.currentTime = 0;
+      grandSound.play();
+
+      spawnClovers();
+      return;
+    }
+
+    document.getElementById("result").innerHTML =
+      "🍀 You won " + reward + " Lucky Points!";
+
+    spawnClovers();
+
+  }, 4200);
+}
+
+function spawnClovers() {
+  for (let i = 0; i < 40; i++) {
+    let c = document.createElement("div");
+    c.className = "clover";
+    c.innerHTML = "🍀";
+    c.style.left = Math.random() * window.innerWidth + "px";
+    c.style.fontSize = (10 + Math.random() * 20) + "px";
+    document.body.appendChild(c);
+
+    setTimeout(() => c.remove(), 2000);
+  }
+}
+</script>
 
 </body>
 </html>
