@@ -1,38 +1,50 @@
-<script>
-  function giveReward() {
-    // 1% grand prize chance
-    let grandPrizeRoll = Math.random();
-    if (grandPrizeRoll < 0.01) {
-      document.getElementById("result").innerHTML =
-        "🏆 GRAND PRIZE UNLOCKED! 🏆";
-      return;
-    }
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rewards Promo</title>
+</head>
 
-    // Possible rewards (5 to 100 in steps of 5)
-    const rewards = [];
-    for (let i = 5; i <= 100; i += 5) {
-      rewards.push(i);
-    }
+<body style="font-family: Arial; text-align:center; padding-top:50px;">
 
-    // Weighted system: lower values more likely
-    // Weight = inverse (higher points = lower weight)
-    const weights = rewards.map(r => 1 / r);
+  <h1>🎉 Rewards System 🎉</h1>
+  <p>Click to reveal your reward:</p>
 
-    // Build cumulative distribution
-    const totalWeight = weights.reduce((a, b) => a + b, 0);
+  <button onclick="giveReward()" style="font-size:20px; padding:10px 20px;">
+    Claim Reward
+  </button>
 
-    let random = Math.random() * totalWeight;
+  <h2 id="result"></h2>
 
-    let selected = rewards[0];
-    for (let i = 0; i < rewards.length; i++) {
-      random -= weights[i];
-      if (random <= 0) {
-        selected = rewards[i];
-        break;
+  <script>
+    function giveReward() {
+
+      // 1% grand prize
+      if (Math.random() < 0.01) {
+        document.getElementById("result").innerHTML =
+          "🏆 GRAND PRIZE! 🏆";
+        return;
+      }
+
+      const rewards = [];
+      for (let i = 5; i <= 100; i += 5) {
+        rewards.push(i);
+      }
+
+      const weights = rewards.map(r => 1 / r);
+      const total = weights.reduce((a, b) => a + b, 0);
+
+      let rand = Math.random() * total;
+
+      for (let i = 0; i < rewards.length; i++) {
+        rand -= weights[i];
+        if (rand <= 0) {
+          document.getElementById("result").innerHTML =
+            "You earned " + rewards[i] + " points!";
+          return;
+        }
       }
     }
+  </script>
 
-    document.getElementById("result").innerHTML =
-      "You earned " + selected + " points!";
-  }
-</script>
+</body>
+</html>
