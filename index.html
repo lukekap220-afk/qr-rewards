@@ -3,36 +3,40 @@
 <head>
   <title>Lucky Legendary Bracket Wheel</title>
 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <style>
     body {
       margin: 0;
       font-family: Arial;
       background: #f3fff3;
       text-align: center;
-      overflow: hidden;
+      overflow-x: hidden;
     }
 
     h1 {
       color: green;
-      margin-top: 20px;
+      margin-top: 15px;
+      font-size: 24px;
     }
 
     p {
       color: green;
+      font-size: 14px;
     }
 
     .wheel-container {
       position: relative;
-      width: 320px;
-      height: 320px;
-      margin: 40px auto;
+      width: min(80vw, 320px);
+      height: min(80vw, 320px);
+      margin: 30px auto;
     }
 
     .wheel {
       width: 100%;
       height: 100%;
       border-radius: 50%;
-      border: 8px solid green;
+      border: 6px solid green;
       background: conic-gradient(
         #b6f7b6 0% 10%,
         #7efc7e 10% 20%,
@@ -50,32 +54,47 @@
 
     .pointer {
       position: absolute;
-      top: -20px;
+      top: -18px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 30px;
+      font-size: 26px;
     }
 
     button {
-      margin-top: 20px;
-      padding: 12px 25px;
+      margin-top: 10px;
+      padding: 14px 22px;
       font-size: 18px;
       cursor: pointer;
       background: green;
       color: white;
       border: none;
-      border-radius: 10px;
+      border-radius: 12px;
+      width: 70%;
+      max-width: 250px;
     }
 
     #result {
       color: green;
-      margin-top: 20px;
-      font-size: 22px;
+      margin-top: 15px;
+      font-size: 18px;
+      padding: 0 10px;
     }
+
+    .rarity {
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+    }
+
+    /* Rarity colors */
+    .common { color: #2e7d32; }
+    .rare { color: #1976d2; }
+    .epic { color: #7b1fa2; }
+    .mythic { color: #ff8f00; }
 
     .clover {
       position: absolute;
-      font-size: 20px;
+      font-size: 18px;
       animation: fall 2s linear forwards;
     }
 
@@ -108,27 +127,27 @@ if (spun) {
   document.getElementById("result").innerHTML = "You already spun the wheel.";
 }
 
-// 🎵 RANDOM BACKGROUND MUSIC (per user)
-let bgMusic;
-
-if (Math.random() < 0.5) {
-  bgMusic = new Audio("Lucky_Legendary_Bracket.mp3");
-} else {
-  bgMusic = new Audio("Different_Blueprints.mp3");
-}
+// sounds
+let bgMusic = new Audio(Math.random() < 0.5 
+  ? "Lucky_Legendary_Bracket.mp3" 
+  : "Different_Blueprints.mp3"
+);
 
 bgMusic.loop = true;
 bgMusic.volume = 0.4;
 
-// Must start after interaction (browser rule)
 document.body.addEventListener("click", () => {
-  if (bgMusic.paused) {
-    bgMusic.play();
-  }
+  if (bgMusic.paused) bgMusic.play();
 }, { once: true });
 
-// 🏆 GRAND PRIZE SOUND
 let grandSound = new Audio("Crown_of_the_Sovereign.mp3");
+
+function getRarity(value) {
+  if (value <= 20) return {name: "Common", class: "common"};
+  if (value <= 50) return {name: "Rare", class: "rare"};
+  if (value <= 75) return {name: "Epic", class: "epic"};
+  return {name: "MYTHIC", class: "mythic"};
+}
 
 function spinWheel() {
   if (localStorage.getItem("spun")) return;
@@ -155,26 +174,28 @@ function spinWheel() {
   }
 
   const reward = rewards[selectedIndex];
+  const rarity = getRarity(reward);
 
   const rotation = 360 * 5 + (selectedIndex * 36);
   wheel.style.transform = `rotate(${rotation}deg)`;
 
   setTimeout(() => {
 
-    // 🏆 GRAND PRIZE (1%)
     if (Math.random() < 0.01) {
       document.getElementById("result").innerHTML =
-        "🏆 GRAND PRIZE UNLOCKED! 🏆";
+        `<span class="rarity mythic">🏆 GRAND PRIZE UNLOCKED! 🏆</span>`;
 
       grandSound.currentTime = 0;
       grandSound.play();
-
       spawnClovers();
       return;
     }
 
     document.getElementById("result").innerHTML =
-      "🍀 You won " + reward + " Lucky Points!";
+      `🍀 You won <b>${reward}</b> Lucky Points<br>
+       <span class="rarity ${rarity.class}">
+       ${rarity.name} Reward
+       </span>`;
 
     spawnClovers();
 
@@ -182,14 +203,12 @@ function spinWheel() {
 }
 
 function spawnClovers() {
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 30; i++) {
     let c = document.createElement("div");
     c.className = "clover";
     c.innerHTML = "🍀";
     c.style.left = Math.random() * window.innerWidth + "px";
-    c.style.fontSize = (10 + Math.random() * 20) + "px";
     document.body.appendChild(c);
-
     setTimeout(() => c.remove(), 2000);
   }
 }
