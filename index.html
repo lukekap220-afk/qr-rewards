@@ -15,14 +15,16 @@
       transition: background 0.5s ease;
     }
 
+    h1, p, #result {
+      color: #1b5e20;
+    }
+
     h1 {
-      color: #00ff88;
       margin-top: 15px;
       font-size: 24px;
     }
 
     p {
-      color: #00ff88;
       font-size: 14px;
     }
 
@@ -37,21 +39,21 @@
       width: 100%;
       height: 100%;
       border-radius: 50%;
-      border: 6px solid #00ff88;
+      border: 6px solid #1b5e20;
       background: conic-gradient(
-        #39ff14 0% 10%,
-        #00ffcc 10% 20%,
-        #39ff14 20% 30%,
-        #00ffcc 30% 40%,
-        #39ff14 40% 50%,
-        #00ffcc 50% 60%,
-        #39ff14 60% 70%,
-        #00ffcc 70% 80%,
-        #39ff14 80% 90%,
-        #00ffcc 90% 100%
+        #b6f7b6 0% 10%,
+        #7efc7e 10% 20%,
+        #b6f7b6 20% 30%,
+        #7efc7e 30% 40%,
+        #b6f7b6 40% 50%,
+        #7efc7e 50% 60%,
+        #b6f7b6 60% 70%,
+        #7efc7e 70% 80%,
+        #b6f7b6 80% 90%,
+        #7efc7e 90% 100%
       );
       transition: transform 4s cubic-bezier(0.2, 0.8, 0.2, 1);
-      box-shadow: 0 0 25px #00ff88;
+      box-shadow: 0 0 10px rgba(0,0,0,0.15);
     }
 
     .pointer {
@@ -67,17 +69,15 @@
       padding: 14px 22px;
       font-size: 16px;
       cursor: pointer;
-      background: #00ff88;
-      color: black;
+      background: #1b5e20;
+      color: white;
       border: none;
       border-radius: 12px;
       width: 70%;
       max-width: 250px;
-      box-shadow: 0 0 10px #00ff88;
     }
 
     #result {
-      color: #00ff88;
       margin-top: 15px;
       font-size: 18px;
       padding: 0 10px;
@@ -89,10 +89,10 @@
       display: block;
     }
 
-    .common { color: #39ff14; }
-    .rare { color: #00e5ff; }
-    .epic { color: #d500f9; }
-    .mythic { color: #ffd600; }
+    .common { color: #2e7d32; }
+    .rare { color: #1976d2; }
+    .epic { color: #7b1fa2; }
+    .mythic { color: #ff8f00; }
 
     .clover {
       position: absolute;
@@ -130,7 +130,7 @@ if (localStorage.getItem("spun")) {
   document.getElementById("result").innerHTML = "You already spun the wheel.";
 }
 
-// AUDIO POOL (all 3 now randomized)
+// AUDIO POOL
 const audioPool = [
   "Lucky_Legendary_Bracket.mp3",
   "Different_Blueprints.mp3",
@@ -140,11 +140,31 @@ const audioPool = [
 let currentAudio;
 let lastResult = "";
 
+// CLEAN BACKGROUND COLORS
 function getRarity(value) {
-  if (value <= 20) return {name: "Common", class: "common", bg: "linear-gradient(135deg, #39ff14, #00ff88)"};
-  if (value <= 50) return {name: "Rare", class: "rare", bg: "linear-gradient(135deg, #00e5ff, #2979ff)"};
-  if (value <= 75) return {name: "Epic", class: "epic", bg: "linear-gradient(135deg, #d500f9, #6a00ff)"};
-  return {name: "MYTHIC", class: "mythic", bg: "linear-gradient(135deg, #ffd600, #ff6f00)"};
+  if (value <= 20) return {
+    name: "Common",
+    class: "common",
+    bg: "#dff5e1"
+  };
+
+  if (value <= 50) return {
+    name: "Rare",
+    class: "rare",
+    bg: "#dceeff"
+  };
+
+  if (value <= 75) return {
+    name: "Epic",
+    class: "epic",
+    bg: "#f0e0ff"
+  };
+
+  return {
+    name: "MYTHIC",
+    class: "mythic",
+    bg: "#fff4d6"
+  };
 }
 
 function spinWheel() {
@@ -153,7 +173,7 @@ function spinWheel() {
   localStorage.setItem("spun", "true");
   document.getElementById("spinBtn").disabled = true;
 
-  // RANDOM AUDIO PER SPIN
+  // RANDOM AUDIO
   const randomTrack = audioPool[Math.floor(Math.random() * audioPool.length)];
   currentAudio = new Audio(randomTrack);
   currentAudio.volume = 0.5;
@@ -162,7 +182,6 @@ function spinWheel() {
   const wheel = document.getElementById("wheel");
 
   const rewards = [5,10,15,20,25,30,40,50,75,100];
-
   const weights = rewards.map(r => 1 / r);
   const total = weights.reduce((a,b)=>a+b,0);
 
@@ -185,7 +204,7 @@ function spinWheel() {
 
   setTimeout(() => {
 
-    // BACKGROUND CHANGE (NEON)
+    // BACKGROUND CHANGE
     document.body.style.background = rarity.bg;
 
     lastResult = `I just won ${reward} Lucky Points (${rarity.name}) 🍀`;
