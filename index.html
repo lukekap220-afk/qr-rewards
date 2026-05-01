@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Lucky Legendary Wheel</title>
+  <title>Lucky Legendary Bracket Wheel</title>
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SUPABASE -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     body {
@@ -10,16 +14,22 @@
       font-family: Arial;
       background: #f3fff3;
       text-align: center;
+      overflow-x: hidden;
       transition: background 0.5s ease;
     }
 
-    h1, #result { color: #1b5e20; }
+    h1, p, #result {
+      color: #1b5e20;
+    }
+
+    h1 { margin-top: 15px; font-size: 24px; }
+    p { font-size: 14px; }
 
     .wheel-container {
       position: relative;
       width: min(80vw, 320px);
       height: min(80vw, 320px);
-      margin: 20px auto;
+      margin: 30px auto;
     }
 
     .wheel {
@@ -27,7 +37,18 @@
       height: 100%;
       border-radius: 50%;
       border: 6px solid #1b5e20;
-      background: conic-gradient(#b6f7b6 0% 10%, #7efc7e 10% 20%, #b6f7b6 20% 30%, #7efc7e 30% 40%, #b6f7b6 40% 50%, #7efc7e 50% 60%, #b6f7b6 60% 70%, #7efc7e 70% 80%, #b6f7b6 80% 90%, #7efc7e 90% 100%);
+      background: conic-gradient(
+        #b6f7b6 0% 10%,
+        #7efc7e 10% 20%,
+        #b6f7b6 20% 30%,
+        #7efc7e 30% 40%,
+        #b6f7b6 40% 50%,
+        #7efc7e 50% 60%,
+        #b6f7b6 60% 70%,
+        #7efc7e 70% 80%,
+        #b6f7b6 80% 90%,
+        #7efc7e 90% 100%
+      );
       transition: transform 4s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
@@ -41,110 +62,230 @@
 
     button {
       margin-top: 10px;
-      padding: 12px 20px;
+      padding: 14px 22px;
       font-size: 16px;
+      cursor: pointer;
       background: #1b5e20;
       color: white;
       border: none;
-      border-radius: 10px;
-      cursor: pointer;
+      border-radius: 12px;
+      width: 70%;
+      max-width: 250px;
+    }
+
+    #leaderboard {
+      margin-top: 25px;
+      padding: 10px;
+      max-width: 350px;
+      margin-left: auto;
+      margin-right: auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
 
     .entry {
-      background: white;
-      margin: 5px auto;
-      padding: 8px;
-      border-radius: 8px;
-      width: 80%;
-      max-width: 300px;
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    #result {
+      margin-top: 15px;
+      font-size: 18px;
+    }
+
+    .rarity { font-weight: bold; display: block; margin-top: 10px; }
+    .common { color: #2e7d32; }
+    .rare { color: #1976d2; }
+    .epic { color: #7b1fa2; }
+    .mythic { color: #ff8f00; }
+
+    .clover {
+      position: absolute;
+      font-size: 18px;
+      animation: fall 2s linear forwards;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(-50px); opacity: 1; }
+      100% { transform: translateY(600px); opacity: 0; }
     }
   </style>
 </head>
 
 <body>
 
-<h1>🍀 Lucky Wheel 🍀</h1>
+<h1>🍀 Lucky Legendary Bracket Wheel 🍀</h1>
+<p>One spin only — make it count</p>
 
 <div class="wheel-container">
   <div class="pointer">⬇️</div>
   <div id="wheel" class="wheel"></div>
 </div>
 
-<button onclick="spinWheel()">SPIN</button>
+<button id="spinBtn" onclick="spinWheel()">SPIN 🍀</button>
+<button onclick="shareResult()">Share Result</button>
 
 <div id="result"></div>
 
-<h2>🏆 Leaderboard</h2>
-<div id="leaderboard"></div>
-
-<!-- SUPABASE -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- LEADERBOARD -->
+<div id="leaderboard">
+  <h3>🏆 Leaderboard</h3>
+  <div id="board"></div>
+</div>
 
 <script>
-
+/* ---------------- SUPABASE ---------------- */
 const supabaseUrl = "https://ixaywrxlmoqqtdqdatqp.supabase.co";
-const supabaseKey = "YOUR_SUPABASE_KEY_HERE"; // 🔴 paste your key here
+const supabaseKey = "sb_publishable_RrJz42atmk8HYCMHfcCPcQ_Q09dEfdEfdE"; // your key
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+/* ---------------- USER ---------------- */
+let username = localStorage.getItem("username");
 
-let lastScore = 0;
-
-// RARITY BACKGROUNDS
-function getRarity(value) {
-  if (value <= 20) return {name:"Common", bg:"#dff5e1"};
-  if (value <= 50) return {name:"Rare", bg:"#dceeff"};
-  if (value <= 75) return {name:"Epic", bg:"#f0e0ff"};
-  return {name:"Mythic", bg:"#fff4d6"};
+if (!username) {
+  username = prompt("Enter your username for leaderboard:");
+  if (!username) username = "Player" + Math.floor(Math.random()*9999);
+  localStorage.setItem("username", username);
 }
 
-// SPIN
-async function spinWheel() {
+/* ---------------- GAME LOCK ---------------- */
+if (localStorage.getItem("spun")) {
+  document.getElementById("spinBtn").disabled = true;
+}
+
+/* ---------------- STATE ---------------- */
+const audioPool = [
+  "Lucky_Legendary_Bracket.mp3",
+  "Different_Blueprints.mp3",
+  "Crown_of_the_Sovereign.mp3"
+];
+
+let currentAudio;
+let lastResult = "";
+let lastPoints = 0;
+
+/* ---------------- RARITY ---------------- */
+function getRarity(value) {
+  if (value <= 20) return { name:"Common", class:"common", bg:"#dff5e1" };
+  if (value <= 50) return { name:"Rare", class:"rare", bg:"#dceeff" };
+  if (value <= 75) return { name:"Epic", class:"epic", bg:"#f0e0ff" };
+  return { name:"MYTHIC", class:"mythic", bg:"#fff4d6" };
+}
+
+/* ---------------- SPIN ---------------- */
+function spinWheel() {
+  if (localStorage.getItem("spun")) return;
+
+  localStorage.setItem("spun","true");
+  document.getElementById("spinBtn").disabled = true;
+
+  const wheel = document.getElementById("wheel");
+
   const rewards = [5,10,15,20,25,30,40,50,75,100];
-  const reward = rewards[Math.floor(Math.random()*rewards.length)];
+  const weights = rewards.map(r => 1/r);
+  const total = weights.reduce((a,b)=>a+b,0);
+
+  let rand = Math.random() * total;
+  let index = 0;
+
+  for (let i=0;i<rewards.length;i++){
+    rand -= weights[i];
+    if (rand <= 0) { index = i; break; }
+  }
+
+  const reward = rewards[index];
+  lastPoints = reward;
+
   const rarity = getRarity(reward);
+  const rotation = 360*5 + (index*36);
 
-  document.getElementById("wheel").style.transform =
-    `rotate(${360*5 + Math.random()*360}deg)`;
+  wheel.style.transform = `rotate(${rotation}deg)`;
 
-  setTimeout(async () => {
-
+  setTimeout(() => {
     document.body.style.background = rarity.bg;
-    lastScore = reward;
 
-    let name = prompt("Enter your name:");
-    if (!name) name = "Anonymous";
+    lastResult = `${username} won ${reward} Lucky Points (${rarity.name})`;
 
     document.getElementById("result").innerHTML =
-      `You got <b>${reward}</b> points (${rarity.name})`;
+      `🍀 You won <b>${reward}</b> Lucky Points
+       <span class="rarity ${rarity.class}">${rarity.name}</span>`;
 
-    await supabase.from("leaderboard").insert([
-      { name, score: reward }
-    ]);
-
+    saveScore(username, reward);
+    spawnClovers();
     loadLeaderboard();
 
-  }, 4000);
+  }, 4200);
 }
 
-// LOAD LEADERBOARD
+/* ---------------- SUPABASE SAVE ---------------- */
+async function saveScore(name, points) {
+  const { data } = await supabaseClient
+    .from("leaderboard")
+    .select("points")
+    .eq("name", name)
+    .single();
+
+  if (data) {
+    await supabaseClient
+      .from("leaderboard")
+      .update({ points: data.points + points })
+      .eq("name", name);
+  } else {
+    await supabaseClient
+      .from("leaderboard")
+      .insert([{ name, points }]);
+  }
+}
+
+/* ---------------- LEADERBOARD LOAD ---------------- */
 async function loadLeaderboard() {
-  const { data } = await supabase
+  const { data } = await supabaseClient
     .from("leaderboard")
     .select("*")
-    .order("score", { ascending: false })
+    .order("points", { ascending: false })
     .limit(10);
 
-  let html = "";
+  const board = document.getElementById("board");
+  board.innerHTML = "";
 
-  data.forEach((d, i) => {
-    html += `<div class="entry">#${i+1} ${d.name} - ${d.score}</div>`;
+  data.forEach((p, i) => {
+    board.innerHTML += `
+      <div class="entry">
+        <span>#${i+1} ${p.name}</span>
+        <span>${p.points}</span>
+      </div>
+    `;
   });
-
-  document.getElementById("leaderboard").innerHTML = html;
 }
 
 loadLeaderboard();
 
+/* ---------------- EFFECTS ---------------- */
+function spawnClovers() {
+  for (let i=0;i<30;i++){
+    let c=document.createElement("div");
+    c.className="clover";
+    c.innerHTML="🍀";
+    c.style.left=Math.random()*window.innerWidth+"px";
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),2000);
+  }
+}
+
+/* ---------------- SHARE ---------------- */
+function shareResult() {
+  if (!lastResult) return alert("Spin first!");
+
+  if (navigator.share) {
+    navigator.share({ title:"Lucky Wheel", text:lastResult });
+  } else {
+    navigator.clipboard.writeText(lastResult);
+    alert("Copied!");
+  }
+}
 </script>
 
 </body>
