@@ -2,9 +2,8 @@
 <html>
 <head>
   <title>Lucky Legendary Bracket Wheel</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
     body {
@@ -16,7 +15,12 @@
       transition: background 0.5s ease;
     }
 
-    h1, p, #result { color: #1b5e20; }
+    h1, p, #result {
+      color: #1b5e20;
+    }
+
+    h1 { margin-top: 15px; font-size: 24px; }
+    p { font-size: 14px; }
 
     .wheel-container {
       position: relative;
@@ -31,11 +35,16 @@
       border-radius: 50%;
       border: 6px solid #1b5e20;
       background: conic-gradient(
-        #b6f7b6 0% 10%, #7efc7e 10% 20%,
-        #b6f7b6 20% 30%, #7efc7e 30% 40%,
-        #b6f7b6 40% 50%, #7efc7e 50% 60%,
-        #b6f7b6 60% 70%, #7efc7e 70% 80%,
-        #b6f7b6 80% 90%, #7efc7e 90% 100%
+        #b6f7b6 0% 10%,
+        #7efc7e 10% 20%,
+        #b6f7b6 20% 30%,
+        #7efc7e 30% 40%,
+        #b6f7b6 40% 50%,
+        #7efc7e 50% 60%,
+        #b6f7b6 60% 70%,
+        #7efc7e 70% 80%,
+        #b6f7b6 80% 90%,
+        #7efc7e 90% 100%
       );
       transition: transform 4s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
@@ -61,23 +70,21 @@
       max-width: 250px;
     }
 
-    #leaderboard {
-      margin-top: 25px;
-      max-width: 350px;
-      margin-left: auto;
-      margin-right: auto;
-      background: white;
-      border-radius: 12px;
-      padding: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    #result {
+      margin-top: 15px;
+      font-size: 18px;
     }
 
-    .entry {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      border-bottom: 1px solid #eee;
+    .rarity {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
     }
+
+    .common { color: #2e7d32; }
+    .rare { color: #1976d2; }
+    .epic { color: #7b1fa2; }
+    .mythic { color: #ff8f00; }
 
     .clover {
       position: absolute;
@@ -107,159 +114,106 @@
 
 <div id="result"></div>
 
-<div id="leaderboard">
-  <h3>🏆 Global Leaderboard (Live)</h3>
-  <div id="board"></div>
-</div>
-
 <script>
-/* ---------------- SUPABASE ---------------- */
-const supabaseUrl = "YOUR_SUPABASE_URL";
-const supabaseKey = "YOUR_SUPABASE_ANON_KEY";
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-/* ---------------- USER ---------------- */
-let username = localStorage.getItem("username");
+/* ---------------- STATE ---------------- */
+let spun = localStorage.getItem("spun") === "true";
+let lastResult = "";
+let currentAudio = null;
 
-if (!username) {
-  username = prompt("Enter username:");
-  if (!username) username = "Player" + Math.floor(Math.random()*9999);
-  localStorage.setItem("username", username);
-}
-
-/* ---------------- 1 SPIN LIMIT ---------------- */
-if (localStorage.getItem("spun")) {
+/* lock spin if already used */
+if (spun) {
   document.getElementById("spinBtn").disabled = true;
 }
 
-/* ---------------- AUDIO ---------------- */
+/* ---------------- AUDIO FIX ---------------- */
 const audioPool = [
   "Lucky_Legendary_Bracket.mp3",
   "Different_Blueprints.mp3",
   "Crown_of_the_Sovereign.mp3"
 ];
 
-let currentAudio = null;
-
-/* ---------------- STATE ---------------- */
-let lastResult = "";
-
-/* ---------------- RARITY ---------------- */
-function getRarity(v) {
-  if (v <= 20) return { name:"Common", bg:"#dff5e1" };
-  if (v <= 50) return { name:"Rare", bg:"#dceeff" };
-  if (v <= 75) return { name:"Epic", bg:"#f0e0ff" };
-  return { name:"MYTHIC", bg:"#fff4d6" };
-}
-
-/* ---------------- SPIN ---------------- */
-async function spinWheel() {
-  if (localStorage.getItem("spun")) return;
-
-  localStorage.setItem("spun", "true");
-  document.getElementById("spinBtn").disabled = true;
-
-  const wheel = document.getElementById("wheel");
-
-  // AUDIO FIX (clean restart every spin)
+function playAudio() {
+  // stop old audio cleanly
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
   }
 
-  const track = audioPool[Math.floor(Math.random()*audioPool.length)];
+  const track = audioPool[Math.floor(Math.random() * audioPool.length)];
   currentAudio = new Audio(track);
   currentAudio.volume = 0.7;
-  currentAudio.play().catch(()=>{});
+
+  // important: must be triggered by user click (spin button)
+  currentAudio.play().catch(() => {
+    console.log("Audio blocked until user interacts");
+  });
+}
+
+/* ---------------- RARITY ---------------- */
+function getRarity(v) {
+  if (v <= 20) return { name:"Common", class:"common", bg:"#dff5e1" };
+  if (v <= 50) return { name:"Rare", class:"rare", bg:"#dceeff" };
+  if (v <= 75) return { name:"Epic", class:"epic", bg:"#f0e0ff" };
+  return { name:"MYTHIC", class:"mythic", bg:"#fff4d6" };
+}
+
+/* ---------------- SPIN ---------------- */
+function spinWheel() {
+  if (spun) return;
+
+  spun = true;
+  localStorage.setItem("spun", "true");
+  document.getElementById("spinBtn").disabled = true;
+
+  const wheel = document.getElementById("wheel");
+
+  playAudio();
 
   const rewards = [5,10,15,20,25,30,40,50,75,100];
 
   const weights = rewards.map(r => 1/r);
   const total = weights.reduce((a,b)=>a+b,0);
 
-  let rand = Math.random()*total;
+  let rand = Math.random() * total;
   let index = 0;
 
-  for (let i=0;i<rewards.length;i++){
+  for (let i = 0; i < rewards.length; i++) {
     rand -= weights[i];
-    if (rand <= 0) { index = i; break; }
+    if (rand <= 0) {
+      index = i;
+      break;
+    }
   }
 
   const reward = rewards[index];
   const rarity = getRarity(reward);
 
-  wheel.style.transform = `rotate(${360*5 + index*36}deg)`;
+  const rotation = 360 * 5 + index * 36;
+  wheel.style.transform = `rotate(${rotation}deg)`;
 
   setTimeout(() => {
     document.body.style.background = rarity.bg;
 
-    lastResult = `${username} won ${reward} points (${rarity.name})`;
+    lastResult = `I won ${reward} Lucky Points (${rarity.name})`;
 
     document.getElementById("result").innerHTML =
-      `🍀 You won <b>${reward}</b> points<br>${rarity.name}`;
+      `🍀 You won <b>${reward}</b> Lucky Points
+       <span class="rarity ${rarity.class}">${rarity.name}</span>`;
 
-    saveScore(username, reward);
     spawnClovers();
-
   }, 4200);
 }
 
-/* ---------------- GLOBAL LEADERBOARD ---------------- */
-async function saveScore(name, points) {
-  const { data } = await supabaseClient
-    .from("leaderboard")
-    .select("*")
-    .eq("name", name)
-    .single();
-
-  if (data) {
-    await supabaseClient
-      .from("leaderboard")
-      .update({ points: data.points + points })
-      .eq("name", name);
-  } else {
-    await supabaseClient
-      .from("leaderboard")
-      .insert([{ name, points }]);
-  }
-}
-
-/* ---------------- LIVE LEADERBOARD ---------------- */
-async function loadLeaderboard() {
-  const { data } = await supabaseClient
-    .from("leaderboard")
-    .select("*")
-    .order("points", { ascending:false })
-    .limit(10);
-
-  const board = document.getElementById("board");
-  board.innerHTML = "";
-
-  if (!data) return;
-
-  data.forEach((p,i)=>{
-    board.innerHTML += `
-      <div class="entry">
-        <span>#${i+1} ${p.name}</span>
-        <span>${p.points}</span>
-      </div>
-    `;
-  });
-}
-
-/* LIVE REFRESH LOOP */
-setInterval(loadLeaderboard, 3000);
-loadLeaderboard();
-
 /* ---------------- EFFECTS ---------------- */
 function spawnClovers() {
-  for (let i=0;i<25;i++){
-    let c=document.createElement("div");
-    c.className="clover";
-    c.innerHTML="🍀";
-    c.style.left=Math.random()*window.innerWidth+"px";
+  for (let i = 0; i < 25; i++) {
+    const c = document.createElement("div");
+    c.className = "clover";
+    c.innerHTML = "🍀";
+    c.style.left = Math.random() * window.innerWidth + "px";
     document.body.appendChild(c);
-    setTimeout(()=>c.remove(),2000);
+    setTimeout(() => c.remove(), 2000);
   }
 }
 
@@ -268,12 +222,16 @@ function shareResult() {
   if (!lastResult) return alert("Spin first!");
 
   if (navigator.share) {
-    navigator.share({ title:"Lucky Wheel", text:lastResult });
+    navigator.share({
+      title: "Lucky Wheel",
+      text: lastResult
+    });
   } else {
     navigator.clipboard.writeText(lastResult);
     alert("Copied!");
   }
 }
+
 </script>
 
 </body>
