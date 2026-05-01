@@ -5,9 +5,6 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- SUPABASE -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <style>
     body {
       margin: 0;
@@ -73,24 +70,6 @@
       max-width: 250px;
     }
 
-    #leaderboard {
-      margin-top: 25px;
-      padding: 10px;
-      max-width: 350px;
-      margin-left: auto;
-      margin-right: auto;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    .entry {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      border-bottom: 1px solid #eee;
-    }
-
     #result {
       margin-top: 15px;
       font-size: 18px;
@@ -118,7 +97,7 @@
 <body>
 
 <h1>🍀 Lucky Legendary Bracket Wheel 🍀</h1>
-<p>One spin only — make it count</p>
+<p>Spin as much as you want</p>
 
 <div class="wheel-container">
   <div class="pointer">⬇️</div>
@@ -130,40 +109,18 @@
 
 <div id="result"></div>
 
-<!-- LEADERBOARD -->
-<div id="leaderboard">
-  <h3>🏆 Leaderboard</h3>
-  <div id="board"></div>
-</div>
-
 <script>
-/* ---------------- SUPABASE ---------------- */
-const supabaseUrl = "https://ixaywrxlmoqqtdqdatqp.supabase.co";
-const supabaseKey = "sb_publishable_RrJz42atmk8HYCMHfcCPcQ_Q09dEfdEfdE"; // your key
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-/* ---------------- USER ---------------- */
-let username = localStorage.getItem("username");
-
-if (!username) {
-  username = prompt("Enter your username for leaderboard:");
-  if (!username) username = "Player" + Math.floor(Math.random()*9999);
-  localStorage.setItem("username", username);
-}
-
-/* ---------------- GAME LOCK ---------------- */
-if (localStorage.getItem("spun")) {
-  document.getElementById("spinBtn").disabled = true;
-}
-
-/* ---------------- STATE ---------------- */
+/* ---------------- AUDIO ---------------- */
 const audioPool = [
   "Lucky_Legendary_Bracket.mp3",
   "Different_Blueprints.mp3",
   "Crown_of_the_Sovereign.mp3"
 ];
 
-let currentAudio;
+let currentAudio = null;
+
+/* ---------------- STATE ---------------- */
 let lastResult = "";
 let lastPoints = 0;
 
@@ -177,12 +134,20 @@ function getRarity(value) {
 
 /* ---------------- SPIN ---------------- */
 function spinWheel() {
-  if (localStorage.getItem("spun")) return;
-
-  localStorage.setItem("spun","true");
-  document.getElementById("spinBtn").disabled = true;
 
   const wheel = document.getElementById("wheel");
+
+  // Stop previous audio
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+  }
+
+  // Play new random audio
+  const randomTrack = audioPool[Math.floor(Math.random() * audioPool.length)];
+  currentAudio = new Audio(randomTrack);
+  currentAudio.volume = 0.6;
+  currentAudio.play().catch(() => {}); // prevents autoplay errors
 
   const rewards = [5,10,15,20,25,30,40,50,75,100];
   const weights = rewards.map(r => 1/r);
@@ -200,68 +165,23 @@ function spinWheel() {
   lastPoints = reward;
 
   const rarity = getRarity(reward);
-  const rotation = 360*5 + (index*36);
 
+  const rotation = 360*5 + (index*36);
   wheel.style.transform = `rotate(${rotation}deg)`;
 
   setTimeout(() => {
     document.body.style.background = rarity.bg;
 
-    lastResult = `${username} won ${reward} Lucky Points (${rarity.name})`;
+    lastResult = `I just won ${reward} Lucky Points (${rarity.name})!`;
 
     document.getElementById("result").innerHTML =
       `🍀 You won <b>${reward}</b> Lucky Points
        <span class="rarity ${rarity.class}">${rarity.name}</span>`;
 
-    saveScore(username, reward);
     spawnClovers();
-    loadLeaderboard();
 
   }, 4200);
 }
-
-/* ---------------- SUPABASE SAVE ---------------- */
-async function saveScore(name, points) {
-  const { data } = await supabaseClient
-    .from("leaderboard")
-    .select("points")
-    .eq("name", name)
-    .single();
-
-  if (data) {
-    await supabaseClient
-      .from("leaderboard")
-      .update({ points: data.points + points })
-      .eq("name", name);
-  } else {
-    await supabaseClient
-      .from("leaderboard")
-      .insert([{ name, points }]);
-  }
-}
-
-/* ---------------- LEADERBOARD LOAD ---------------- */
-async function loadLeaderboard() {
-  const { data } = await supabaseClient
-    .from("leaderboard")
-    .select("*")
-    .order("points", { ascending: false })
-    .limit(10);
-
-  const board = document.getElementById("board");
-  board.innerHTML = "";
-
-  data.forEach((p, i) => {
-    board.innerHTML += `
-      <div class="entry">
-        <span>#${i+1} ${p.name}</span>
-        <span>${p.points}</span>
-      </div>
-    `;
-  });
-}
-
-loadLeaderboard();
 
 /* ---------------- EFFECTS ---------------- */
 function spawnClovers() {
@@ -286,6 +206,7 @@ function shareResult() {
     alert("Copied!");
   }
 }
+
 </script>
 
 </body>
