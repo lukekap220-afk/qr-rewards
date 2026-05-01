@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Lucky Legendary Bracket Wheel</title>
+  <title>Lucky Legendary Wheel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
@@ -10,13 +10,10 @@
       font-family: Arial;
       background: #f3fff3;
       text-align: center;
-      overflow-x: hidden;
       transition: background 0.5s ease;
     }
 
-    h1, p, #result {
-      color: #1b5e20;
-    }
+    h1, #result { color: #1b5e20; }
 
     .wheel-container {
       position: relative;
@@ -53,11 +50,6 @@
       cursor: pointer;
     }
 
-    #leaderboard {
-      margin-top: 20px;
-      padding: 10px;
-    }
-
     .entry {
       background: white;
       margin: 5px auto;
@@ -65,159 +57,93 @@
       border-radius: 8px;
       width: 80%;
       max-width: 300px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-
-    .rarity { font-weight: bold; }
-    .common { color: #2e7d32; }
-    .rare { color: #1976d2; }
-    .epic { color: #7b1fa2; }
-    .mythic { color: #ff8f00; }
-
-    .clover {
-      position: absolute;
-      animation: fall 2s linear forwards;
-    }
-
-    @keyframes fall {
-      to { transform: translateY(600px); opacity: 0; }
     }
   </style>
 </head>
 
 <body>
 
-<h1>🍀 Lucky Legendary Bracket Wheel 🍀</h1>
-<p>One spin only — make it count</p>
+<h1>🍀 Lucky Wheel 🍀</h1>
 
 <div class="wheel-container">
   <div class="pointer">⬇️</div>
   <div id="wheel" class="wheel"></div>
 </div>
 
-<button id="spinBtn" onclick="spinWheel()">SPIN 🍀</button>
-<button onclick="shareResult()">Share</button>
+<button onclick="spinWheel()">SPIN</button>
 
 <div id="result"></div>
 
 <h2>🏆 Leaderboard</h2>
 <div id="leaderboard"></div>
 
+<!-- SUPABASE -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 
-// AUDIO
-const audioPool = [
-  "Lucky_Legendary_Bracket.mp3",
-  "Different_Blueprints.mp3",
-  "Crown_of_the_Sovereign.mp3"
-];
+const supabaseUrl = "https://ixaywrxlmoqqtdqdatqp.supabase.co";
+const supabaseKey = "YOUR_SUPABASE_KEY_HERE"; // 🔴 paste your key here
 
-let lastResult = "";
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-// LOCK
-if (localStorage.getItem("spun")) {
-  document.getElementById("spinBtn").disabled = true;
-  document.getElementById("result").innerHTML = "You already spun.";
-}
+let lastScore = 0;
 
-// RARITY
+// RARITY BACKGROUNDS
 function getRarity(value) {
-  if (value <= 20) return {name:"Common", class:"common", bg:"#dff5e1"};
-  if (value <= 50) return {name:"Rare", class:"rare", bg:"#dceeff"};
-  if (value <= 75) return {name:"Epic", class:"epic", bg:"#f0e0ff"};
-  return {name:"MYTHIC", class:"mythic", bg:"#fff4d6"};
+  if (value <= 20) return {name:"Common", bg:"#dff5e1"};
+  if (value <= 50) return {name:"Rare", bg:"#dceeff"};
+  if (value <= 75) return {name:"Epic", bg:"#f0e0ff"};
+  return {name:"Mythic", bg:"#fff4d6"};
 }
 
 // SPIN
-function spinWheel() {
-  if (localStorage.getItem("spun")) return;
-
-  localStorage.setItem("spun","true");
-  document.getElementById("spinBtn").disabled = true;
-
-  new Audio(audioPool[Math.floor(Math.random()*audioPool.length)]).play();
-
+async function spinWheel() {
   const rewards = [5,10,15,20,25,30,40,50,75,100];
-  const weights = rewards.map(r => 1/r);
-  let rand = Math.random() * weights.reduce((a,b)=>a+b);
-
-  let index = 0;
-  for (let i=0;i<rewards.length;i++){
-    rand -= weights[i];
-    if (rand <= 0){ index = i; break; }
-  }
-
-  const reward = rewards[index];
+  const reward = rewards[Math.floor(Math.random()*rewards.length)];
   const rarity = getRarity(reward);
 
   document.getElementById("wheel").style.transform =
-    `rotate(${360*5 + index*36}deg)`;
+    `rotate(${360*5 + Math.random()*360}deg)`;
 
-  setTimeout(()=>{
+  setTimeout(async () => {
+
     document.body.style.background = rarity.bg;
+    lastScore = reward;
 
-    lastResult = `I won ${reward} points (${rarity.name})`;
+    let name = prompt("Enter your name:");
+    if (!name) name = "Anonymous";
 
     document.getElementById("result").innerHTML =
-      `You got <b>${reward}</b> <span class="${rarity.class}">${rarity.name}</span>`;
+      `You got <b>${reward}</b> points (${rarity.name})`;
 
-    saveScore(reward);
-    renderLeaderboard();
-    spawnClovers();
-  },4200);
+    await supabase.from("leaderboard").insert([
+      { name, score: reward }
+    ]);
+
+    loadLeaderboard();
+
+  }, 4000);
 }
 
-// LEADERBOARD
-function saveScore(score) {
-  let scores = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+// LOAD LEADERBOARD
+async function loadLeaderboard() {
+  const { data } = await supabase
+    .from("leaderboard")
+    .select("*")
+    .order("score", { ascending: false })
+    .limit(10);
 
-  let name = prompt("Enter your name for leaderboard:");
-  if (!name) name = "Anonymous";
-
-  scores.push({name, score});
-  scores.sort((a,b)=>b.score-a.score);
-  scores = scores.slice(0,5);
-
-  localStorage.setItem("leaderboard", JSON.stringify(scores));
-}
-
-function renderLeaderboard() {
-  let scores = JSON.parse(localStorage.getItem("leaderboard") || "[]");
   let html = "";
 
-  scores.forEach((s,i)=>{
-    html += `<div class="entry">#${i+1} ${s.name} - ${s.score}</div>`;
+  data.forEach((d, i) => {
+    html += `<div class="entry">#${i+1} ${d.name} - ${d.score}</div>`;
   });
 
-  document.getElementById("leaderboard").innerHTML = html || "No scores yet";
+  document.getElementById("leaderboard").innerHTML = html;
 }
 
-// SHARE
-function shareResult(){
-  if(!lastResult) return alert("Spin first");
-
-  if(navigator.share){
-    navigator.share({text:lastResult});
-  } else {
-    navigator.clipboard.writeText(lastResult);
-    alert("Copied!");
-  }
-}
-
-// CLOVERS
-function spawnClovers(){
-  for(let i=0;i<25;i++){
-    let c=document.createElement("div");
-    c.className="clover";
-    c.innerHTML="🍀";
-    c.style.left=Math.random()*window.innerWidth+"px";
-    document.body.appendChild(c);
-    setTimeout(()=>c.remove(),2000);
-  }
-}
-
-// INIT
-renderLeaderboard();
+loadLeaderboard();
 
 </script>
 
